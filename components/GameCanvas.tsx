@@ -73,10 +73,15 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     const sizeMultiplier = isHighEnergy ? 1.4 : 1.0;
     const points = isHighEnergy ? 50 : 10;
     
+    // Determine movement speed
+    const speedBase = isHighEnergy ? 4 : 2;
+
     const newTarget: Target = {
       id: Math.random().toString(36).substr(2, 9),
       x: margin + Math.random() * (width - margin * 2),
       y: margin + Math.random() * (height - margin * 2),
+      vx: (Math.random() - 0.5) * speedBase,
+      vy: (Math.random() - 0.5) * speedBase,
       radius: baseRadius * sizeMultiplier,
       emoji: emojiList[Math.floor(Math.random() * emojiList.length)],
       scoreValue: points,
@@ -190,6 +195,29 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
     // 1. Draw Targets
     targets.current.forEach(target => {
+      // --- Physics Update ---
+      target.x += target.vx;
+      target.y += target.vy;
+
+      // Bounce off walls with margin for radius
+      if (target.x - target.radius < 0) {
+         target.x = target.radius;
+         target.vx *= -1;
+      }
+      if (target.x + target.radius > canvas.width) {
+         target.x = canvas.width - target.radius;
+         target.vx *= -1;
+      }
+      if (target.y - target.radius < 0) {
+         target.y = target.radius;
+         target.vy *= -1;
+      }
+      if (target.y + target.radius > canvas.height) {
+         target.y = canvas.height - target.radius;
+         target.vy *= -1;
+      }
+
+      // --- Rendering ---
       const isSpecial = target.scoreValue > 10;
       
       // Pulse targets with beat

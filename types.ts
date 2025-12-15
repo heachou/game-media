@@ -19,6 +19,8 @@ export interface Target {
   id: string;
   x: number;
   y: number;
+  vx: number; // Velocity X
+  vy: number; // Velocity Y
   radius: number;
   emoji: string;
   scoreValue: number;
