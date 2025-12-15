@@ -171,21 +171,29 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.arc(target.x, target.y, currentRadius, 0, 2 * Math.PI);
       
       // Dynamic Rendering: Gold for high score targets, Magenta for normal
+      // Added shadowBlur for Neon Glow effect
       if (isSpecial) {
-        ctx.fillStyle = `rgba(255, 215, 0, 0.3)`; // Gold fill
-        ctx.strokeStyle = '#FFD700'; // Gold border
+        ctx.fillStyle = `rgba(255, 215, 0, 0.6)`; // Increased opacity
+        ctx.strokeStyle = '#FFD700'; 
         ctx.lineWidth = 4;
+        ctx.shadowBlur = 25;
+        ctx.shadowColor = '#FFD700';
       } else {
-        ctx.fillStyle = `rgba(255, 0, 255, 0.2)`; // Magenta fill
-        ctx.strokeStyle = '#ff00ff'; // Magenta border
-        ctx.lineWidth = 2;
+        ctx.fillStyle = `rgba(255, 0, 255, 0.4)`; // Increased opacity
+        ctx.strokeStyle = '#ff00ff'; 
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = '#ff00ff';
       }
       
       ctx.fill();
       ctx.stroke();
 
+      // Reset shadow for emoji text (keep text crisp)
+      ctx.shadowBlur = 0;
+
       // Draw Emoji
-      ctx.font = `${24 * beatScale}px serif`;
+      ctx.font = `${28 * beatScale}px serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(target.emoji, target.x, target.y);
@@ -205,12 +213,12 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
           ctx.moveTo(p1.x * canvas.width, p1.y * canvas.height);
           ctx.lineTo(p2.x * canvas.width, p2.y * canvas.height);
           
-          // Neon Style
+          // Neon Style - Brighter
           const hue = (Date.now() / 10) % 360;
-          ctx.strokeStyle = `hsl(${hue}, 100%, 50%)`;
-          ctx.lineWidth = 4 * beatScale;
-          ctx.shadowBlur = 10 * beatScale;
-          ctx.shadowColor = `hsl(${hue}, 100%, 70%)`;
+          ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`; // Lighter lightness
+          ctx.lineWidth = 6 * beatScale; // Thicker lines
+          ctx.shadowBlur = 20 * beatScale; // Stronger glow
+          ctx.shadowColor = `hsl(${hue}, 100%, 75%)`;
           ctx.stroke();
           
           // Reset shadow for performance
@@ -222,9 +230,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       landmarks.forEach((lm: any) => {
         if (lm.visibility > 0.5) {
           ctx.beginPath();
-          ctx.arc(lm.x * canvas.width, lm.y * canvas.height, 5 * beatScale, 0, 2 * Math.PI);
-          ctx.fillStyle = '#00ffff';
+          ctx.arc(lm.x * canvas.width, lm.y * canvas.height, 6 * beatScale, 0, 2 * Math.PI);
+          // White core for maximum brightness, cyan glow
+          ctx.fillStyle = '#ffffff'; 
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = '#00ffff';
           ctx.fill();
+          ctx.shadowBlur = 0;
         }
       });
 
@@ -248,7 +260,10 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size * p.life, 0, 2 * Math.PI);
+      ctx.shadowBlur = 10; // Glowing particles
+      ctx.shadowColor = p.color;
       ctx.fill();
+      ctx.shadowBlur = 0;
       ctx.globalAlpha = 1.0;
     }
 
@@ -364,7 +379,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       {/* Hidden Video Feed for MediaPipe */}
       <video 
         ref={videoRef} 
-        className="absolute top-0 left-0 w-full h-full object-cover opacity-20 transform scale-x-[-1]" 
+        // Increased opacity from 20 to 50 for brighter background visibility
+        className="absolute top-0 left-0 w-full h-full object-cover opacity-50 transform scale-x-[-1]" 
         playsInline 
         muted
       />
