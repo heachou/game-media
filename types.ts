@@ -23,6 +23,7 @@ export interface Target {
   emoji: string;
   scoreValue: number;
   createdAt: number;
+  hue: number; // Added for random color
 }
 
 export interface GameState {

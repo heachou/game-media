@@ -87,7 +87,7 @@ const App = () => {
           </div>
           
           <div className="mt-8 text-xs text-gray-500">
-            <p>Powered by Gemini AI • MediaPipe • Web Audio</p>
+            <p>Powered by MediaPipe • Web Audio</p>
             <p className="mt-1">Allows camera access to play.</p>
           </div>
         </div>
@@ -118,11 +118,11 @@ const App = () => {
             </div>
           </div>
 
-          {/* AI Commentary */}
+          {/* Commentary Feed */}
           <div className="max-w-md text-right">
              <div className="inline-block bg-gradient-to-r from-purple-900/80 to-pink-900/80 backdrop-blur-md border border-pink-500/30 p-4 rounded-lg shadow-[0_0_20px_rgba(236,72,153,0.3)] transform transition-all duration-300">
                 <div className="text-xs text-pink-400 uppercase tracking-widest mb-1 flex items-center justify-end gap-2">
-                  <span>Gemini Live Feed</span>
+                  <span>System Live Feed</span>
                   <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                 </div>
                 <div className="text-lg md:text-xl font-bold text-white italic">

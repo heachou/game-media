@@ -9,10 +9,5 @@ if (!rootElement) {
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(
-  // StrictMode can sometimes cause double-invocations which mess with 
-  // complex Canvas/Video refs, but good for debugging. 
-  // If performance issues arise with MediaPipe init, remove StrictMode.
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
+  <App />
 );

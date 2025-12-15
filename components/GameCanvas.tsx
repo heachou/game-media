@@ -37,6 +37,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioController = useRef(new AudioController());
   
+  // Keep track of latest isPlaying state without triggering effect re-runs
+  const isPlayingRef = useRef(isPlaying);
+
   // Game State Refs (mutable to avoid re-renders in loop)
   const particles = useRef<Particle[]>([]);
   const targets = useRef<Target[]>([]);
@@ -45,18 +48,28 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   const lastCommentScore = useRef(0);
   const lastTargetSpawn = useRef(0);
   const poseRef = useRef<any>(null);
-  const animationFrameRef = useRef<number>(0);
   
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [isAudioReady, setIsAudioReady] = useState(false);
 
+  // Sync isPlaying prop to ref
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
   // --- Helpers ---
   const spawnTarget = (width: number, height: number, isHighEnergy: boolean = false) => {
+    // Limit total targets to 30
+    if (targets.current.length >= 30) return;
+
     const margin = 50;
     
     // Select properties based on energy level
     const emojiList = isHighEnergy ? HIGH_ENERGY_EMOJIS : EMOJIS;
-    const baseRadius = 30 + Math.random() * 20;
+    
+    // Radius reduced by half (15-25 instead of 30-50)
+    const baseRadius = 15 + Math.random() * 10;
+    
     const sizeMultiplier = isHighEnergy ? 1.4 : 1.0;
     const points = isHighEnergy ? 50 : 10;
     
@@ -68,6 +81,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       emoji: emojiList[Math.floor(Math.random() * emojiList.length)],
       scoreValue: points,
       createdAt: performance.now(),
+      // Random Hue (0-360)
+      hue: Math.floor(Math.random() * 360),
     };
     targets.current.push(newTarget);
   };
@@ -126,11 +141,12 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         combo.current += 1;
         onScoreUpdate(score.current, combo.current);
         
-        // Larger, gold explosion for special targets
+        // Explosion matches target color
+        const explosionColor = `hsl(${target.hue}, 100%, 60%)`;
         spawnExplosion(
           target.x, 
           target.y, 
-          isSpecial ? '#FFD700' : '#00ffcc', 
+          explosionColor, 
           isSpecial ? 2.0 : 1.0
         );
         
@@ -149,15 +165,27 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   // --- Drawing ---
   const draw = (landmarks: any[]) => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const container = containerRef.current;
+    if (!canvas || !container) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Force strict resolution sync
+    // This fixes issues where canvas is initialized with 0 size or default 300x150
+    if (canvas.width !== container.clientWidth || canvas.height !== container.clientHeight) {
+      canvas.width = container.clientWidth;
+      canvas.height = container.clientHeight;
+    }
+
+    // Safety check for 0 dimensions
+    if (canvas.width === 0 || canvas.height === 0) return;
 
     // Visual Analysis
     const audioData = audioController.current.getAnalysis();
     const beatScale = 1 + audioData.bass * 0.5; // Pulse effect
 
-    // Clear
+    // Reset State
+    ctx.globalAlpha = 1.0;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     // 1. Draw Targets
@@ -170,21 +198,21 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.beginPath();
       ctx.arc(target.x, target.y, currentRadius, 0, 2 * Math.PI);
       
-      // Dynamic Rendering: Gold for high score targets, Magenta for normal
-      // Added shadowBlur for Neon Glow effect
-      if (isSpecial) {
-        ctx.fillStyle = `rgba(255, 215, 0, 0.6)`; // Increased opacity
-        ctx.strokeStyle = '#FFD700'; 
-        ctx.lineWidth = 4;
-        ctx.shadowBlur = 25;
-        ctx.shadowColor = '#FFD700';
-      } else {
-        ctx.fillStyle = `rgba(255, 0, 255, 0.4)`; // Increased opacity
-        ctx.strokeStyle = '#ff00ff'; 
-        ctx.lineWidth = 3;
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = '#ff00ff';
-      }
+      // Dynamic Rendering with Random Hue
+      // Use the stored hue from target state
+      const hue = target.hue;
+      
+      // Fill: High saturation, 60% opacity
+      ctx.fillStyle = `hsla(${hue}, 100%, 50%, 0.6)`;
+      
+      // Stroke: Lighter version
+      ctx.strokeStyle = `hsl(${hue}, 100%, 60%)`;
+      
+      ctx.lineWidth = isSpecial ? 4 : 3;
+      
+      // Glow: Matches color
+      ctx.shadowBlur = isSpecial ? 25 : 15;
+      ctx.shadowColor = `hsl(${hue}, 100%, 60%)`;
       
       ctx.fill();
       ctx.stroke();
@@ -193,7 +221,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       ctx.shadowBlur = 0;
 
       // Draw Emoji
-      ctx.font = `${28 * beatScale}px serif`;
+      // Explicitly reset fillStyle for text to white to ensure visibility
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `${14 * beatScale}px serif`; // Adjusted font size for smaller targets
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(target.emoji, target.x, target.y);
@@ -240,7 +270,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       });
 
-      // Check collisions logic inline here or separately
+      // Check collisions logic inline here
       checkCollisions(landmarks, canvas.width, canvas.height);
     }
 
@@ -344,7 +374,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       if (videoRef.current) {
         const camera = new window.Camera(videoRef.current, {
           onFrame: async () => {
-            if (poseRef.current && isPlaying) {
+            // Check ref current value to avoid stale closures and re-renders
+            if (poseRef.current && isPlayingRef.current) {
               await poseRef.current.send({ image: videoRef.current });
             }
           },
@@ -357,7 +388,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
 
     initPose();
 
-    // Resize handler
+    // Resize handler (Backup)
     const handleResize = () => {
       if (containerRef.current && canvasRef.current) {
         canvasRef.current.width = containerRef.current.clientWidth;
@@ -371,16 +402,15 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       window.removeEventListener('resize', handleResize);
       if (poseRef.current) poseRef.current.close();
     };
-  }, [isPlaying]); // Re-init if drastic state change, usually run once.
-
+  }, []); // Run once on mount, DO NOT depend on isPlaying
 
   return (
     <div ref={containerRef} className="relative w-full h-full bg-black overflow-hidden">
       {/* Hidden Video Feed for MediaPipe */}
       <video 
         ref={videoRef} 
-        // Increased opacity from 20 to 50 for brighter background visibility
-        className="absolute top-0 left-0 w-full h-full object-cover opacity-50 transform scale-x-[-1]" 
+        // Ensure video is behind canvas
+        className="absolute top-0 left-0 w-full h-full object-cover opacity-50 transform scale-x-[-1] z-0" 
         playsInline 
         muted
       />
@@ -388,7 +418,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       {/* Drawing Canvas */}
       <canvas 
         ref={canvasRef}
-        className="absolute top-0 left-0 w-full h-full transform scale-x-[-1]" // Mirror effect
+        // Ensure canvas is strictly above video
+        className="absolute top-0 left-0 w-full h-full transform scale-x-[-1] z-10" 
       />
 
       {/* Audio Element */}
