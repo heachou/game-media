@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Neon Pulse: AI Motion",
+  "description": "A Cyberpunk real-time body tracking game powered by Gemini AI and MediaPipe.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
